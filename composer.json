@@ -1,0 +1,15 @@
+{
+  "name": "student/hpc-phone",
+  "description": "HPC PHONE - PHP OOP MVC PDO ecommerce project",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "phpmailer/phpmailer": "^6.9",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  }
+}
