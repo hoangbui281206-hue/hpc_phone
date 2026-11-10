@@ -15,7 +15,7 @@
     <div class="admin-content">
         <h1>Dashboard quản trị</h1>
         <p class="welcome">
-            Chào mừng bạn đến với trang quản trị HPC PHONE.
+            Chào mừng bạn đến với trang quản trị NEXO TECH.
         </p>
 
         <?php if (!empty($_SESSION['flash'])): ?>
