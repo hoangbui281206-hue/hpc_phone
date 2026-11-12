@@ -76,17 +76,36 @@ $router->post('/logout', 'AuthController@logout');
 |--------------------------------------------------------------------------
 */
 
+/**
+ * Tạo đơn hàng
+ */
 $router->post('/checkout', 'OrderController@checkout');
 
-$router->get(
-    '/payment/{id}',
-    'PaymentController@index'
-);
+/**
+ * Trang thanh toán online
+ */
+$router->get('/payment/{id}', 'PaymentController@index');
 
-$router->post(
-    '/payment/confirm',
-    'PaymentController@confirm'
-);
+/**
+ * Xác nhận thanh toán
+ */
+$router->post('/payment/confirm', 'PaymentController@confirm');
+
+/*
+|--------------------------------------------------------------------------
+| ĐƠN HÀNG CỦA KHÁCH HÀNG
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Danh sách đơn hàng của tôi
+ */
+$router->get('/my-orders', 'OrderController@myOrders');
+
+/**
+ * Chi tiết đơn hàng của tôi
+ */
+$router->get('/my-orders/detail', 'OrderController@myOrderDetail');
 
 /*
 |--------------------------------------------------------------------------
@@ -108,10 +127,7 @@ $router->get('/admin', 'AdminController@index');
 /**
  * Danh sách sản phẩm
  */
-$router->get(
-    '/admin/products',
-    'AdminController@products'
-);
+$router->get('/admin/products', 'AdminController@products');
 
 /**
  * Thêm sản phẩm
@@ -147,7 +163,7 @@ $router->post(
 
 /*
 |--------------------------------------------------------------------------
-| QUẢN LÝ ĐƠN HÀNG
+| QUẢN LÝ ĐƠN HÀNG ADMIN
 |--------------------------------------------------------------------------
 */
 
@@ -188,8 +204,7 @@ $router->post(
 |--------------------------------------------------------------------------
 */
 
-$requestMethod =
-    $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $requestUri = parse_url(
     $_SERVER['REQUEST_URI'] ?? '/',

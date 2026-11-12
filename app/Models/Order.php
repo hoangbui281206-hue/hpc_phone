@@ -7,6 +7,9 @@ use App\Core\BaseModel;
 
 class Order extends BaseModel
 {
+    /**
+     * Tạo đơn hàng mới
+     */
     public function create(
         int $userId,
         array $cart,
@@ -16,20 +19,22 @@ class Order extends BaseModel
         string $paymentMethod = 'cod'
     ): int {
         $allowedMethods = ['cod', 'online'];
-    
+
         if (!in_array($paymentMethod, $allowedMethods, true)) {
             $paymentMethod = 'cod';
         }
-    
+
         $this->db->beginTransaction();
-    
+
         try {
             $total = 0;
-    
+
             foreach ($cart as $item) {
-                $total += (float) $item['price'] * (int) $item['quantity'];
+                $total +=
+                    (float) $item['price']
+                    * (int) $item['quantity'];
             }
-    
+
             $stmt = $this->db->prepare(
                 "INSERT INTO orders (
                     user_id,
@@ -51,7 +56,7 @@ class Order extends BaseModel
                     'pending'
                 )"
             );
-    
+
             $stmt->execute([
                 'user_id' => $userId,
                 'customer_name' => $customerName,
@@ -60,9 +65,9 @@ class Order extends BaseModel
                 'total' => $total,
                 'payment_method' => $paymentMethod
             ]);
-    
+
             $orderId = (int) $this->db->lastInsertId();
-    
+
             $insertItem = $this->db->prepare(
                 "INSERT INTO order_items (
                     order_id,
@@ -78,29 +83,31 @@ class Order extends BaseModel
                     :quantity
                 )"
             );
-    
+
             $stock = $this->db->prepare(
                 "UPDATE products
                  SET stock = stock - :quantity_sub
                  WHERE id = :id
                  AND stock >= :quantity_check"
             );
-    
+
             foreach ($cart as $id => $item) {
+
                 $quantity = (int) $item['quantity'];
-    
+
                 $stock->execute([
                     'quantity_sub' => $quantity,
                     'id' => (int) $id,
                     'quantity_check' => $quantity
                 ]);
-    
+
                 if ($stock->rowCount() !== 1) {
                     throw new \RuntimeException(
-                        'Sản phẩm không đủ tồn kho: ' . $item['name']
+                        'Sản phẩm không đủ tồn kho: '
+                        . $item['name']
                     );
                 }
-    
+
                 $insertItem->execute([
                     'order_id' => $orderId,
                     'product_id' => (int) $id,
@@ -109,16 +116,17 @@ class Order extends BaseModel
                     'quantity' => $quantity
                 ]);
             }
-    
+
             $this->db->commit();
-    
+
             return $orderId;
-    
+
         } catch (\Throwable $e) {
+
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-    
+
             throw $e;
         }
     }
@@ -131,11 +139,56 @@ class Order extends BaseModel
         $stmt = $this->db->query(
             "SELECT orders.*, users.email
              FROM orders
-             LEFT JOIN users ON orders.user_id = users.id
+             LEFT JOIN users
+             ON orders.user_id = users.id
              ORDER BY orders.id DESC"
         );
 
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy danh sách đơn hàng của một khách hàng
+     */
+    public function getOrdersByUser(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM orders
+             WHERE user_id = :user_id
+             ORDER BY id DESC"
+        );
+
+        $stmt->execute([
+            'user_id' => $userId
+        ]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy một đơn hàng của đúng khách hàng
+     */
+    public function findByUser(
+        int $orderId,
+        int $userId
+    ): ?array {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM orders
+             WHERE id = :id
+             AND user_id = :user_id
+             LIMIT 1"
+        );
+
+        $stmt->execute([
+            'id' => $orderId,
+            'user_id' => $userId
+        ]);
+
+        $order = $stmt->fetch();
+
+        return $order ?: null;
     }
 
     /**
@@ -151,7 +204,7 @@ class Order extends BaseModel
     }
 
     /**
-     * Tính tổng doanh thu từ đơn hoàn thành
+     * Tính doanh thu đơn hoàn thành
      */
     public function totalRevenue(): float
     {
@@ -165,7 +218,7 @@ class Order extends BaseModel
     }
 
     /**
-     * Lấy đơn hàng mới nhất
+     * Đơn hàng mới nhất
      */
     public function latest(int $limit = 5): array
     {
@@ -182,19 +235,22 @@ class Order extends BaseModel
     }
 
     /**
-     * Lấy thông tin một đơn hàng
+     * Lấy thông tin một đơn hàng cho Admin
      */
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare(
             "SELECT orders.*, users.email
              FROM orders
-             LEFT JOIN users ON orders.user_id = users.id
+             LEFT JOIN users
+             ON orders.user_id = users.id
              WHERE orders.id = :id
              LIMIT 1"
         );
 
-        $stmt->execute(['id' => $id]);
+        $stmt->execute([
+            'id' => $id
+        ]);
 
         $order = $stmt->fetch();
 
@@ -207,11 +263,14 @@ class Order extends BaseModel
     public function getItems(int $orderId): array
     {
         $stmt = $this->db->prepare(
-            "SELECT * FROM order_items
+            "SELECT *
+             FROM order_items
              WHERE order_id = :order_id"
         );
 
-        $stmt->execute(['order_id' => $orderId]);
+        $stmt->execute([
+            'order_id' => $orderId
+        ]);
 
         return $stmt->fetchAll();
     }
@@ -219,8 +278,10 @@ class Order extends BaseModel
     /**
      * Cập nhật trạng thái đơn hàng
      */
-    public function updateStatus(int $id, string $status): bool
-    {
+    public function updateStatus(
+        int $id,
+        string $status
+    ): bool {
         $allowed = [
             'pending',
             'confirmed',
