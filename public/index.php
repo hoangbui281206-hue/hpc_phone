@@ -215,3 +215,10 @@ $router->dispatch(
     $requestMethod,
     $requestUri ?: '/'
 );
+/**
+ * Quản lý doanh thu
+ */
+$router->get(
+    '/admin/revenue',
+    'AdminController@revenue'
+);

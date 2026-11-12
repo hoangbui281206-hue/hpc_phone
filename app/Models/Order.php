@@ -92,7 +92,6 @@ class Order extends BaseModel
             );
 
             foreach ($cart as $id => $item) {
-
                 $quantity = (int) $item['quantity'];
 
                 $stock->execute([
@@ -148,50 +147,6 @@ class Order extends BaseModel
     }
 
     /**
-     * Lấy danh sách đơn hàng của một khách hàng
-     */
-    public function getOrdersByUser(int $userId): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT *
-             FROM orders
-             WHERE user_id = :user_id
-             ORDER BY id DESC"
-        );
-
-        $stmt->execute([
-            'user_id' => $userId
-        ]);
-
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * Lấy một đơn hàng của đúng khách hàng
-     */
-    public function findByUser(
-        int $orderId,
-        int $userId
-    ): ?array {
-        $stmt = $this->db->prepare(
-            "SELECT *
-             FROM orders
-             WHERE id = :id
-             AND user_id = :user_id
-             LIMIT 1"
-        );
-
-        $stmt->execute([
-            'id' => $orderId,
-            'user_id' => $userId
-        ]);
-
-        $order = $stmt->fetch();
-
-        return $order ?: null;
-    }
-
-    /**
      * Đếm tổng đơn hàng
      */
     public function count(): int
@@ -204,7 +159,7 @@ class Order extends BaseModel
     }
 
     /**
-     * Tính doanh thu đơn hoàn thành
+     * Tổng doanh thu từ đơn hoàn thành
      */
     public function totalRevenue(): float
     {
@@ -218,7 +173,83 @@ class Order extends BaseModel
     }
 
     /**
-     * Đơn hàng mới nhất
+     * Tổng doanh thu - dùng cho trang báo cáo
+     */
+    public function totalCompletedRevenue(): float
+    {
+        return $this->totalRevenue();
+    }
+
+    /**
+     * Đếm số đơn hàng hoàn thành
+     */
+    public function completedOrderCount(): int
+    {
+        $stmt = $this->db->query(
+            "SELECT COUNT(*)
+             FROM orders
+             WHERE status = 'completed'"
+        );
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Doanh thu hôm nay
+     */
+    public function todayRevenue(): float
+    {
+        $stmt = $this->db->query(
+            "SELECT COALESCE(SUM(total), 0)
+             FROM orders
+             WHERE status = 'completed'
+             AND DATE(created_at) = CURDATE()"
+        );
+
+        return (float) $stmt->fetchColumn();
+    }
+
+    /**
+     * Doanh thu theo tháng
+     */
+    public function revenueByMonth(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT
+                YEAR(created_at) AS year,
+                MONTH(created_at) AS month,
+                COUNT(*) AS total_orders,
+                COALESCE(SUM(total), 0) AS revenue
+             FROM orders
+             WHERE status = 'completed'
+             GROUP BY
+                YEAR(created_at),
+                MONTH(created_at)
+             ORDER BY
+                year DESC,
+                month DESC"
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Danh sách đơn hàng đã hoàn thành
+     */
+    public function completedOrders(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT *
+             FROM orders
+             WHERE status = 'completed'
+             ORDER BY id DESC"
+        );
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy các đơn hàng mới nhất
      */
     public function latest(int $limit = 5): array
     {
@@ -235,7 +266,7 @@ class Order extends BaseModel
     }
 
     /**
-     * Lấy thông tin một đơn hàng cho Admin
+     * Tìm đơn hàng theo ID
      */
     public function find(int $id): ?array
     {

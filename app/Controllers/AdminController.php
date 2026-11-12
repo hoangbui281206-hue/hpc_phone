@@ -27,17 +27,56 @@ class AdminController extends BaseController
         $totalRevenue = $orderModel->totalRevenue();
         $latestOrders = $orderModel->latest();
 
-        $this->view('admin/index', compact(
-            'totalProducts',
-            'totalOrders',
-            'totalUsers',
-            'totalRevenue',
-            'latestOrders'
-        ));
+        $this->view(
+            'admin/index',
+            compact(
+                'totalProducts',
+                'totalOrders',
+                'totalUsers',
+                'totalRevenue',
+                'latestOrders'
+            )
+        );
     }
 
     /**
-     * Danh sách sản phẩm
+     * Quản lý doanh thu
+     */
+    public function revenue(): void
+    {
+        $this->requireAdmin();
+
+        $orderModel = new Order();
+
+        $totalRevenue =
+            $orderModel->totalCompletedRevenue();
+
+        $completedOrders =
+            $orderModel->completedOrderCount();
+
+        $todayRevenue =
+            $orderModel->todayRevenue();
+
+        $monthlyRevenue =
+            $orderModel->revenueByMonth();
+
+        $orders =
+            $orderModel->completedOrders();
+
+        $this->view(
+            'admin/revenue',
+            compact(
+                'totalRevenue',
+                'completedOrders',
+                'todayRevenue',
+                'monthlyRevenue',
+                'orders'
+            )
+        );
+    }
+
+    /**
+     * Quản lý sản phẩm
      */
     public function products(): void
     {
@@ -46,16 +85,17 @@ class AdminController extends BaseController
         $productModel = new Product();
         $keyword = trim($_GET['keyword'] ?? '');
 
-        if ($keyword !== '') {
-            $products = $productModel->search($keyword);
-        } else {
-            $products = $productModel->allAdmin();
-        }
+        $products = $keyword !== ''
+            ? $productModel->search($keyword)
+            : $productModel->allAdmin();
 
-        $this->view('admin/products', compact(
-            'products',
-            'keyword'
-        ));
+        $this->view(
+            'admin/products',
+            compact(
+                'products',
+                'keyword'
+            )
+        );
     }
 
     /**
@@ -68,35 +108,50 @@ class AdminController extends BaseController
         $name = trim($_POST['name'] ?? '');
 
         $priceInput = trim($_POST['price'] ?? '');
-        $priceInput = str_replace(['.', ',', ' '], '', $priceInput);
-        $price = (float) $priceInput;
 
+        $priceInput = str_replace(
+            ['.', ',', ' '],
+            '',
+            $priceInput
+        );
+
+        $price = (float) $priceInput;
         $stock = (int) ($_POST['stock'] ?? 0);
-        $image = trim($_POST['image'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $status = (int) ($_POST['status'] ?? 1);
 
         if ($name === '' || $price <= 0 || $stock < 0) {
             $_SESSION['flash'] =
-                'Vui lòng nhập đầy đủ thông tin sản phẩm.';
+                'Vui lòng nhập thông tin sản phẩm hợp lệ.';
 
             $this->redirect('/admin/products');
-            return;
         }
 
-        $salePrice = $this->formatPrice(
-            $_POST['sale_price'] ?? ''
-        );
+        $salePrice = null;
+
+        if (!empty($_POST['sale_price'])) {
+            $salePriceInput = str_replace(
+                ['.', ',', ' '],
+                '',
+                trim($_POST['sale_price'])
+            );
+
+            $salePrice = (float) $salePriceInput;
+
+            if ($salePrice <= 0) {
+                $salePrice = null;
+            }
+        }
 
         try {
             $created = (new Product())->create([
                 'name' => $name,
                 'price' => $price,
                 'sale_price' => $salePrice,
-                'image' => $image,
-                'description' => $description,
+                'image' => trim($_POST['image'] ?? ''),
+                'description' =>
+                    trim($_POST['description'] ?? ''),
                 'stock' => $stock,
-                'status' => $status
+                'status' =>
+                    (int) ($_POST['status'] ?? 1)
             ]);
 
             $_SESSION['flash'] = $created
@@ -105,14 +160,15 @@ class AdminController extends BaseController
 
         } catch (\Throwable $e) {
             $_SESSION['flash'] =
-                'Lỗi khi thêm sản phẩm: ' . $e->getMessage();
+                'Không thể thêm sản phẩm: '
+                . $e->getMessage();
         }
 
         $this->redirect('/admin/products');
     }
 
     /**
-     * Hiển thị trang sửa sản phẩm
+     * Trang sửa sản phẩm
      */
     public function editProduct(): void
     {
@@ -120,21 +176,19 @@ class AdminController extends BaseController
 
         $id = (int) ($_GET['id'] ?? 0);
 
-        if ($id <= 0) {
-            $_SESSION['flash'] = 'ID sản phẩm không hợp lệ.';
-            $this->redirect('/admin/products');
-            return;
-        }
-
         $product = (new Product())->findAdmin($id);
 
         if (!$product) {
-            $_SESSION['flash'] = 'Không tìm thấy sản phẩm.';
+            $_SESSION['flash'] =
+                'Không tìm thấy sản phẩm.';
+
             $this->redirect('/admin/products');
-            return;
         }
 
-        $this->view('admin/product-edit', compact('product'));
+        $this->view(
+            'admin/edit-product',
+            compact('product')
+        );
     }
 
     /**
@@ -147,42 +201,50 @@ class AdminController extends BaseController
         $id = (int) ($_POST['id'] ?? 0);
         $name = trim($_POST['name'] ?? '');
 
-        $priceInput = trim($_POST['price'] ?? '');
-        $priceInput = str_replace(['.', ',', ' '], '', $priceInput);
+        $priceInput = str_replace(
+            ['.', ',', ' '],
+            '',
+            trim($_POST['price'] ?? '')
+        );
+
         $price = (float) $priceInput;
-
         $stock = (int) ($_POST['stock'] ?? 0);
-        $image = trim($_POST['image'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $status = (int) ($_POST['status'] ?? 1);
 
-        if (
-            $id <= 0 ||
-            $name === '' ||
-            $price <= 0 ||
-            $stock < 0
-        ) {
+        if ($id <= 0 || $name === '' || $price <= 0) {
             $_SESSION['flash'] =
                 'Dữ liệu sản phẩm không hợp lệ.';
 
             $this->redirect('/admin/products');
-            return;
         }
 
-        $salePrice = $this->formatPrice(
-            $_POST['sale_price'] ?? ''
-        );
+        $salePrice = null;
+
+        if (!empty($_POST['sale_price'])) {
+            $salePriceInput = str_replace(
+                ['.', ',', ' '],
+                '',
+                trim($_POST['sale_price'])
+            );
+
+            $salePrice = (float) $salePriceInput;
+        }
 
         try {
-            $updated = (new Product())->update($id, [
-                'name' => $name,
-                'price' => $price,
-                'sale_price' => $salePrice,
-                'image' => $image,
-                'description' => $description,
-                'stock' => $stock,
-                'status' => $status
-            ]);
+            $updated = (new Product())->update(
+                $id,
+                [
+                    'name' => $name,
+                    'price' => $price,
+                    'sale_price' => $salePrice,
+                    'image' =>
+                        trim($_POST['image'] ?? ''),
+                    'description' =>
+                        trim($_POST['description'] ?? ''),
+                    'stock' => $stock,
+                    'status' =>
+                        (int) ($_POST['status'] ?? 1)
+                ]
+            );
 
             $_SESSION['flash'] = $updated
                 ? 'Cập nhật sản phẩm thành công.'
@@ -190,14 +252,15 @@ class AdminController extends BaseController
 
         } catch (\Throwable $e) {
             $_SESSION['flash'] =
-                'Lỗi khi cập nhật sản phẩm: ' . $e->getMessage();
+                'Lỗi cập nhật sản phẩm: '
+                . $e->getMessage();
         }
 
         $this->redirect('/admin/products');
     }
 
     /**
-     * Xóa sản phẩm vĩnh viễn
+     * Xóa sản phẩm
      */
     public function deleteProduct(): void
     {
@@ -210,31 +273,31 @@ class AdminController extends BaseController
                 'ID sản phẩm không hợp lệ.';
 
             $this->redirect('/admin/products');
-            return;
         }
 
         try {
             $productModel = new Product();
 
-            $product = $productModel->findAdmin($id);
+            $product =
+                $productModel->findAdmin($id);
 
             if (!$product) {
                 $_SESSION['flash'] =
                     'Không tìm thấy sản phẩm.';
 
                 $this->redirect('/admin/products');
-                return;
             }
 
             $deleted = $productModel->delete($id);
 
             $_SESSION['flash'] = $deleted
-                ? 'Đã xóa sản phẩm vĩnh viễn.'
+                ? 'Đã xóa sản phẩm thành công.'
                 : 'Không thể xóa sản phẩm.';
 
         } catch (\Throwable $e) {
             $_SESSION['flash'] =
-                'Lỗi khi xóa sản phẩm: ' . $e->getMessage();
+                'Không thể xóa sản phẩm này vì sản phẩm '
+                . 'có thể đã tồn tại trong đơn hàng.';
         }
 
         $this->redirect('/admin/products');
@@ -249,7 +312,10 @@ class AdminController extends BaseController
 
         $orders = (new Order())->all();
 
-        $this->view('admin/orders', compact('orders'));
+        $this->view(
+            'admin/orders',
+            compact('orders')
+        );
     }
 
     /**
@@ -261,14 +327,6 @@ class AdminController extends BaseController
 
         $id = (int) ($_GET['id'] ?? 0);
 
-        if ($id <= 0) {
-            $_SESSION['flash'] =
-                'ID đơn hàng không hợp lệ.';
-
-            $this->redirect('/admin/orders');
-            return;
-        }
-
         $orderModel = new Order();
         $order = $orderModel->find($id);
 
@@ -277,7 +335,6 @@ class AdminController extends BaseController
                 'Không tìm thấy đơn hàng.';
 
             $this->redirect('/admin/orders');
-            return;
         }
 
         $items = $orderModel->getItems($id);
@@ -297,25 +354,6 @@ class AdminController extends BaseController
 
         $id = (int) ($_POST['id'] ?? 0);
         $status = trim($_POST['status'] ?? '');
-
-        $allowedStatuses = [
-            'pending',
-            'confirmed',
-            'shipping',
-            'completed',
-            'cancelled'
-        ];
-
-        if (
-            $id <= 0 ||
-            !in_array($status, $allowedStatuses, true)
-        ) {
-            $_SESSION['flash'] =
-                'Dữ liệu cập nhật không hợp lệ.';
-
-            $this->redirect('/admin/orders');
-            return;
-        }
 
         $updated = (new Order())->updateStatus(
             $id,
@@ -338,7 +376,10 @@ class AdminController extends BaseController
 
         $users = (new User())->all();
 
-        $this->view('admin/users', compact('users'));
+        $this->view(
+            'admin/users',
+            compact('users')
+        );
     }
 
     /**
@@ -351,22 +392,6 @@ class AdminController extends BaseController
         $id = (int) ($_POST['id'] ?? 0);
         $role = trim($_POST['role'] ?? '');
 
-        $allowedRoles = [
-            'admin',
-            'customer'
-        ];
-
-        if (
-            $id <= 0 ||
-            !in_array($role, $allowedRoles, true)
-        ) {
-            $_SESSION['flash'] =
-                'Quyền người dùng không hợp lệ.';
-
-            $this->redirect('/admin/users');
-            return;
-        }
-
         $updated = (new User())->updateRole(
             $id,
             $role
@@ -377,31 +402,5 @@ class AdminController extends BaseController
             : 'Không thể cập nhật quyền người dùng.';
 
         $this->redirect('/admin/users');
-    }
-
-    /**
-     * Chuyển giá tiền từ chuỗi sang số.
-     *
-     * Ví dụ:
-     * 18.990.000 -> 18990000
-     * 18,990,000 -> 18990000
-     */
-    private function formatPrice(string $priceInput): ?float
-    {
-        $priceInput = trim($priceInput);
-
-        if ($priceInput === '') {
-            return null;
-        }
-
-        $priceInput = str_replace(
-            ['.', ',', ' '],
-            '',
-            $priceInput
-        );
-
-        $price = (float) $priceInput;
-
-        return $price > 0 ? $price : null;
     }
 }
