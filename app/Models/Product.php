@@ -4,13 +4,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\BaseModel;
-use PDO;
-use Throwable;
 
 class Product extends BaseModel
 {
     /**
-     * Lấy sản phẩm đang hoạt động cho khách hàng
+     * Lấy sản phẩm đang hoạt động
      */
     public function all(): array
     {
@@ -25,7 +23,65 @@ class Product extends BaseModel
     }
 
     /**
-     * Lấy tất cả sản phẩm cho trang Admin
+     * Tìm kiếm và lọc sản phẩm cho khách hàng
+     */
+    public function filter(
+        string $keyword = '',
+        string $stock = '',
+        float $minPrice = 0,
+        float $maxPrice = 0
+    ): array {
+        $sql = "
+            SELECT *
+            FROM products
+            WHERE status = 1
+        ";
+
+        $params = [];
+
+        if ($keyword !== '') {
+            $sql .= "
+                AND name LIKE :keyword
+            ";
+
+            $params['keyword'] =
+                '%' . $keyword . '%';
+        }
+
+        if ($stock === 'in_stock') {
+            $sql .= "
+                AND stock > 0
+            ";
+        }
+
+        if ($minPrice > 0) {
+            $sql .= "
+                AND price >= :min_price
+            ";
+
+            $params['min_price'] = $minPrice;
+        }
+
+        if ($maxPrice > 0) {
+            $sql .= "
+                AND price <= :max_price
+            ";
+
+            $params['max_price'] = $maxPrice;
+        }
+
+        $sql .= "
+            ORDER BY id DESC
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy tất cả sản phẩm cho Admin
      */
     public function allAdmin(): array
     {
@@ -62,7 +118,6 @@ class Product extends BaseModel
 
     /**
      * Tìm sản phẩm cho Admin
-     * Có thể lấy cả sản phẩm đang tạm ẩn
      */
     public function findAdmin(int $id): ?array
     {
@@ -83,7 +138,7 @@ class Product extends BaseModel
     }
 
     /**
-     * Thêm sản phẩm mới
+     * Thêm sản phẩm
      */
     public function create(array $data): bool
     {
@@ -126,8 +181,10 @@ class Product extends BaseModel
     /**
      * Cập nhật sản phẩm
      */
-    public function update(int $id, array $data): bool
-    {
+    public function update(
+        int $id,
+        array $data
+    ): bool {
         $sql = "
             UPDATE products
             SET
@@ -156,66 +213,22 @@ class Product extends BaseModel
     }
 
     /**
-     * Xóa sản phẩm vĩnh viễn
-     *
-     * Nếu sản phẩm đã xuất hiện trong đơn hàng,
-     * các order_items liên quan cũng được xóa trước.
+     * Xóa sản phẩm
      */
     public function delete(int $id): bool
     {
-        try {
-            $this->db->beginTransaction();
+        $stmt = $this->db->prepare(
+            "DELETE FROM products
+             WHERE id = :id"
+        );
 
-            /*
-             * Xóa các chi tiết đơn hàng liên quan đến sản phẩm.
-             * Cần làm bước này trước vì bảng order_items
-             * có khóa ngoại product_id.
-             */
-            $deleteItems = $this->db->prepare(
-                "DELETE FROM order_items
-                 WHERE product_id = :id"
-            );
-
-            $deleteItems->execute([
-                'id' => $id
-            ]);
-
-            /*
-             * Xóa sản phẩm
-             */
-            $deleteProduct = $this->db->prepare(
-                "DELETE FROM products
-                 WHERE id = :id"
-            );
-
-            $deleteProduct->execute([
-                'id' => $id
-            ]);
-
-            /*
-             * Kiểm tra sản phẩm có thực sự được xóa
-             */
-            if ($deleteProduct->rowCount() === 0) {
-                $this->db->rollBack();
-                return false;
-            }
-
-            $this->db->commit();
-
-            return true;
-
-        } catch (Throwable $e) {
-
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-
-            throw $e;
-        }
+        return $stmt->execute([
+            'id' => $id
+        ]);
     }
 
     /**
-     * Tìm kiếm sản phẩm trong Admin
+     * Tìm kiếm cho Admin
      */
     public function search(string $keyword): array
     {
@@ -234,7 +247,7 @@ class Product extends BaseModel
     }
 
     /**
-     * Đếm tổng số sản phẩm
+     * Đếm sản phẩm
      */
     public function count(): int
     {

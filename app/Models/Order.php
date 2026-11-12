@@ -18,6 +18,14 @@ class Order extends BaseModel
         string $address,
         string $paymentMethod = 'cod'
     ): int {
+        if ($userId <= 0) {
+            throw new \RuntimeException('Vui lòng đăng nhập để đặt hàng.');
+        }
+
+        if (empty($cart)) {
+            throw new \RuntimeException('Giỏ hàng đang trống.');
+        }
+
         $allowedMethods = ['cod', 'online'];
 
         if (!in_array($paymentMethod, $allowedMethods, true)) {
@@ -27,15 +35,28 @@ class Order extends BaseModel
         $this->db->beginTransaction();
 
         try {
+            /*
+             * Tính tổng tiền
+             */
             $total = 0;
 
             foreach ($cart as $item) {
-                $total +=
-                    (float) $item['price']
-                    * (int) $item['quantity'];
+                $price = (float) ($item['price'] ?? 0);
+                $quantity = (int) ($item['quantity'] ?? 0);
+
+                if ($price < 0 || $quantity <= 0) {
+                    throw new \RuntimeException(
+                        'Dữ liệu giỏ hàng không hợp lệ.'
+                    );
+                }
+
+                $total += $price * $quantity;
             }
 
-            $stmt = $this->db->prepare(
+            /*
+             * Tạo đơn hàng
+             */
+            $orderStmt = $this->db->prepare(
                 "INSERT INTO orders (
                     user_id,
                     customer_name,
@@ -52,23 +73,28 @@ class Order extends BaseModel
                     :address,
                     :total,
                     :payment_method,
-                    'unpaid',
-                    'pending'
+                    :payment_status,
+                    :status
                 )"
             );
 
-            $stmt->execute([
+            $orderStmt->execute([
                 'user_id' => $userId,
                 'customer_name' => $customerName,
                 'phone' => $phone,
                 'address' => $address,
                 'total' => $total,
-                'payment_method' => $paymentMethod
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'unpaid',
+                'status' => 'pending'
             ]);
 
             $orderId = (int) $this->db->lastInsertId();
 
-            $insertItem = $this->db->prepare(
+            /*
+             * Lưu chi tiết sản phẩm
+             */
+            $itemStmt = $this->db->prepare(
                 "INSERT INTO order_items (
                     order_id,
                     product_id,
@@ -84,7 +110,10 @@ class Order extends BaseModel
                 )"
             );
 
-            $stock = $this->db->prepare(
+            /*
+             * Trừ số lượng tồn kho
+             */
+            $stockStmt = $this->db->prepare(
                 "UPDATE products
                  SET stock = stock - :quantity_sub
                  WHERE id = :id
@@ -92,26 +121,47 @@ class Order extends BaseModel
             );
 
             foreach ($cart as $id => $item) {
-                $quantity = (int) $item['quantity'];
+                $productId = (int) ($item['id'] ?? $id);
+                $productName = trim(
+                    (string) ($item['name'] ?? '')
+                );
+                $price = (float) ($item['price'] ?? 0);
+                $quantity = (int) ($item['quantity'] ?? 0);
 
-                $stock->execute([
-                    'quantity_sub' => $quantity,
-                    'id' => (int) $id,
-                    'quantity_check' => $quantity
-                ]);
-
-                if ($stock->rowCount() !== 1) {
+                if (
+                    $productId <= 0
+                    || $productName === ''
+                    || $quantity <= 0
+                ) {
                     throw new \RuntimeException(
-                        'Sản phẩm không đủ tồn kho: '
-                        . $item['name']
+                        'Thông tin sản phẩm không hợp lệ.'
                     );
                 }
 
-                $insertItem->execute([
+                /*
+                 * Kiểm tra và trừ tồn kho
+                 */
+                $stockStmt->execute([
+                    'quantity_sub' => $quantity,
+                    'id' => $productId,
+                    'quantity_check' => $quantity
+                ]);
+
+                if ($stockStmt->rowCount() !== 1) {
+                    throw new \RuntimeException(
+                        'Sản phẩm "' . $productName
+                        . '" không đủ số lượng trong kho.'
+                    );
+                }
+
+                /*
+                 * Lưu sản phẩm vào đơn hàng
+                 */
+                $itemStmt->execute([
                     'order_id' => $orderId,
-                    'product_id' => (int) $id,
-                    'product_name' => $item['name'],
-                    'price' => $item['price'],
+                    'product_id' => $productId,
+                    'product_name' => $productName,
+                    'price' => $price,
                     'quantity' => $quantity
                 ]);
             }
@@ -121,7 +171,6 @@ class Order extends BaseModel
             return $orderId;
 
         } catch (\Throwable $e) {
-
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
@@ -173,28 +222,6 @@ class Order extends BaseModel
     }
 
     /**
-     * Tổng doanh thu - dùng cho trang báo cáo
-     */
-    public function totalCompletedRevenue(): float
-    {
-        return $this->totalRevenue();
-    }
-
-    /**
-     * Đếm số đơn hàng hoàn thành
-     */
-    public function completedOrderCount(): int
-    {
-        $stmt = $this->db->query(
-            "SELECT COUNT(*)
-             FROM orders
-             WHERE status = 'completed'"
-        );
-
-        return (int) $stmt->fetchColumn();
-    }
-
-    /**
      * Doanh thu hôm nay
      */
     public function todayRevenue(): float
@@ -210,31 +237,37 @@ class Order extends BaseModel
     }
 
     /**
-     * Doanh thu theo tháng
+     * Doanh thu tháng này
      */
-    public function revenueByMonth(): array
+    public function monthRevenue(): float
     {
         $stmt = $this->db->query(
-            "SELECT
-                YEAR(created_at) AS year,
-                MONTH(created_at) AS month,
-                COUNT(*) AS total_orders,
-                COALESCE(SUM(total), 0) AS revenue
+            "SELECT COALESCE(SUM(total), 0)
              FROM orders
              WHERE status = 'completed'
-             GROUP BY
-                YEAR(created_at),
-                MONTH(created_at)
-             ORDER BY
-                year DESC,
-                month DESC"
+             AND MONTH(created_at) = MONTH(CURDATE())
+             AND YEAR(created_at) = YEAR(CURDATE())"
         );
 
-        return $stmt->fetchAll();
+        return (float) $stmt->fetchColumn();
     }
 
     /**
-     * Danh sách đơn hàng đã hoàn thành
+     * Đếm đơn hàng đã hoàn thành
+     */
+    public function completedCount(): int
+    {
+        $stmt = $this->db->query(
+            "SELECT COUNT(*)
+             FROM orders
+             WHERE status = 'completed'"
+        );
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Danh sách đơn hàng hoàn thành
      */
     public function completedOrders(): array
     {
@@ -249,7 +282,7 @@ class Order extends BaseModel
     }
 
     /**
-     * Lấy các đơn hàng mới nhất
+     * Lấy đơn hàng mới nhất
      */
     public function latest(int $limit = 5): array
     {
@@ -266,7 +299,7 @@ class Order extends BaseModel
     }
 
     /**
-     * Tìm đơn hàng theo ID
+     * Tìm đơn hàng theo ID cho Admin
      */
     public function find(int $id): ?array
     {
@@ -289,14 +322,59 @@ class Order extends BaseModel
     }
 
     /**
-     * Lấy sản phẩm trong đơn hàng
+     * Lấy tất cả đơn hàng của khách hàng đang đăng nhập
+     */
+    public function getByUserId(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM orders
+             WHERE user_id = :user_id
+             ORDER BY id DESC"
+        );
+
+        $stmt->execute([
+            'user_id' => $userId
+        ]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy một đơn hàng và kiểm tra quyền sở hữu của khách hàng
+     */
+    public function findByUser(
+        int $orderId,
+        int $userId
+    ): ?array {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM orders
+             WHERE id = :id
+             AND user_id = :user_id
+             LIMIT 1"
+        );
+
+        $stmt->execute([
+            'id' => $orderId,
+            'user_id' => $userId
+        ]);
+
+        $order = $stmt->fetch();
+
+        return $order ?: null;
+    }
+
+    /**
+     * Lấy các sản phẩm trong đơn hàng
      */
     public function getItems(int $orderId): array
     {
         $stmt = $this->db->prepare(
             "SELECT *
              FROM order_items
-             WHERE order_id = :order_id"
+             WHERE order_id = :order_id
+             ORDER BY id ASC"
         );
 
         $stmt->execute([
@@ -313,7 +391,7 @@ class Order extends BaseModel
         int $id,
         string $status
     ): bool {
-        $allowed = [
+        $allowedStatus = [
             'pending',
             'confirmed',
             'shipping',
@@ -321,7 +399,7 @@ class Order extends BaseModel
             'cancelled'
         ];
 
-        if (!in_array($status, $allowed, true)) {
+        if (!in_array($status, $allowedStatus, true)) {
             return false;
         }
 

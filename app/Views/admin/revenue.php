@@ -1,325 +1,439 @@
-<?php
-declare(strict_types=1);
-?>
+<div class="admin-dashboard">
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+    <aside class="admin-sidebar">
 
-    <div>
-        <h1 class="fw-bold mb-1">
-            💰 Quản lý doanh thu
-        </h1>
+        <h2>⚙️ ADMIN</h2>
 
-        <p class="text-muted mb-0">
-            Thống kê doanh thu từ các đơn hàng đã hoàn thành
+        <a href="/admin">
+            📊 Tổng quan
+        </a>
+
+        <a href="/admin/products">
+            📱 Quản lý sản phẩm
+        </a>
+
+        <a href="/admin/orders">
+            📦 Quản lý đơn hàng
+        </a>
+
+        <a href="/admin/revenue" class="active">
+            💰 Doanh thu
+        </a>
+
+        <a href="/admin/users">
+            👥 Quản lý người dùng
+        </a>
+
+        <hr>
+
+        <a href="/">
+            🏠 Về trang chủ
+        </a>
+
+    </aside>
+
+
+    <main class="admin-content">
+
+        <h1>💰 Quản lý doanh thu</h1>
+
+        <p class="welcome">
+            Thống kê doanh thu từ các đơn hàng đã hoàn thành.
         </p>
-    </div>
-
-    <a
-        href="/admin"
-        class="btn btn-outline-secondary"
-    >
-        ← Dashboard
-    </a>
-
-</div>
 
 
-<div class="row g-4 mb-4">
+        <!-- THỐNG KÊ DOANH THU -->
+        <div class="revenue-grid">
 
-    <div class="col-md-4">
+            <div class="revenue-card">
 
-        <div class="card border-0 shadow-sm h-100">
+                <span class="revenue-icon">
+                    📅
+                </span>
 
-            <div class="card-body">
+                <div>
+                    <p>Doanh thu hôm nay</p>
 
-                <div class="text-muted mb-2">
-                    Tổng doanh thu
+                    <h2>
+                        <?= number_format(
+                            (float) $revenueToday,
+                            0,
+                            ',',
+                            '.'
+                        ) ?> đ
+                    </h2>
                 </div>
 
-                <h3 class="fw-bold text-success mb-0">
+            </div>
 
-                    <?= number_format(
-                        (float) $totalRevenue,
-                        0,
-                        ',',
-                        '.'
-                    ) ?> đ
 
-                </h3>
+            <div class="revenue-card">
+
+                <span class="revenue-icon">
+                    📆
+                </span>
+
+                <div>
+                    <p>Doanh thu tháng này</p>
+
+                    <h2>
+                        <?= number_format(
+                            (float) $revenueThisMonth,
+                            0,
+                            ',',
+                            '.'
+                        ) ?> đ
+                    </h2>
+                </div>
+
+            </div>
+
+
+            <div class="revenue-card">
+
+                <span class="revenue-icon">
+                    💰
+                </span>
+
+                <div>
+                    <p>Tổng doanh thu</p>
+
+                    <h2>
+                        <?= number_format(
+                            (float) $totalRevenue,
+                            0,
+                            ',',
+                            '.'
+                        ) ?> đ
+                    </h2>
+                </div>
+
+            </div>
+
+
+            <div class="revenue-card">
+
+                <span class="revenue-icon">
+                    📦
+                </span>
+
+                <div>
+                    <p>Đơn hoàn thành</p>
+
+                    <h2>
+                        <?= (int) $completedOrders ?>
+                    </h2>
+                </div>
 
             </div>
 
         </div>
 
-    </div>
 
+        <!-- DANH SÁCH ĐƠN HÀNG -->
+        <div class="revenue-table-card">
 
-    <div class="col-md-4">
+            <div class="section-header">
 
-        <div class="card border-0 shadow-sm h-100">
+                <div>
 
-            <div class="card-body">
+                    <h2>
+                        Đơn hàng đã hoàn thành
+                    </h2>
 
-                <div class="text-muted mb-2">
-                    Doanh thu hôm nay
+                    <p>
+                        Danh sách các đơn hàng được tính vào doanh thu.
+                    </p>
+
                 </div>
-
-                <h3 class="fw-bold text-primary mb-0">
-
-                    <?= number_format(
-                        (float) $todayRevenue,
-                        0,
-                        ',',
-                        '.'
-                    ) ?> đ
-
-                </h3>
 
             </div>
 
-        </div>
 
-    </div>
+            <?php if (empty($orders)): ?>
 
+                <div class="empty-data">
 
-    <div class="col-md-4">
+                    <div>📭</div>
 
-        <div class="card border-0 shadow-sm h-100">
+                    <h3>
+                        Chưa có doanh thu
+                    </h3>
 
-            <div class="card-body">
+                    <p>
+                        Chưa có đơn hàng nào hoàn thành.
+                    </p>
 
-                <div class="text-muted mb-2">
-                    Đơn hoàn thành
                 </div>
 
-                <h3 class="fw-bold mb-0">
+            <?php else: ?>
 
-                    <?= (int) $completedOrders ?>
+                <div class="table-wrapper">
 
-                    <small class="fs-6 text-muted">
-                        đơn
-                    </small>
+                    <table class="revenue-table">
 
-                </h3>
+                        <thead>
 
-            </div>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Khách hàng</th>
+                                <th>Số điện thoại</th>
+                                <th>Thanh toán</th>
+                                <th>Doanh thu</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            <?php foreach ($orders as $order): ?>
+
+                                <tr>
+
+                                    <td>
+                                        #<?= (int) $order['id'] ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars(
+                                            $order['customer_name']
+                                        ) ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars(
+                                            $order['phone']
+                                        ) ?>
+                                    </td>
+
+                                    <td>
+
+                                        <?php if (
+                                            ($order['payment_method'] ?? '')
+                                            === 'online'
+                                        ): ?>
+
+                                            <span class="payment-online">
+                                                Online
+                                            </span>
+
+                                        <?php else: ?>
+
+                                            <span class="payment-cod">
+                                                COD
+                                            </span>
+
+                                        <?php endif; ?>
+
+                                    </td>
+
+                                    <td class="money">
+
+                                        <?= number_format(
+                                            (float) $order['total'],
+                                            0,
+                                            ',',
+                                            '.'
+                                        ) ?> đ
+
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            <?php endif; ?>
 
         </div>
 
-    </div>
+    </main>
 
 </div>
 
 
-<!-- DOANH THU THEO THÁNG -->
-<div class="card border-0 shadow-sm mb-4">
+<style>
+
+.admin-dashboard {
+    display: flex;
+    gap: 25px;
+    margin: 20px 0;
+    min-height: 650px;
+}
+
+.admin-sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    padding: 20px 15px;
+    background: #212529;
+    border-radius: 10px;
+}
+
+.admin-sidebar h2 {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.admin-sidebar a {
+    display: block;
+    padding: 13px 15px;
+    margin-bottom: 7px;
+    color: #ddd;
+    text-decoration: none;
+    border-radius: 6px;
+}
+
+.admin-sidebar a:hover,
+.admin-sidebar a.active {
+    background: #ffc107;
+    color: #212529;
+}
+
+.admin-sidebar hr {
+    border-color: #555;
+    margin: 20px 0;
+}
+
+.admin-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.welcome {
+    color: #777;
+}
+
+.revenue-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin: 25px 0;
+}
+
+.revenue-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.revenue-icon {
+    font-size: 32px;
+}
+
+.revenue-card p {
+    margin: 0 0 6px;
+    color: #777;
+}
+
+.revenue-card h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.revenue-table-card {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+.section-header p {
+    color: #777;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
 
-    <div class="card-header bg-white py-3">
+.revenue-table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
 
-        <h5 class="fw-bold mb-0">
-            📊 Doanh thu theo tháng
-        </h5>
+.revenue-table th,
+.revenue-table td {
+    padding: 13px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
 
-    </div>
+.revenue-table th {
+    background: #f5f5f5;
+}
 
-    <div class="table-responsive">
+.money {
+    font-weight: bold;
+}
 
-        <table class="table table-hover align-middle mb-0">
+.payment-online,
+.payment-cod {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+}
 
-            <thead class="table-light">
+.payment-online {
+    background: #d1e7dd;
+    color: #0f5132;
+}
 
-                <tr>
-                    <th>Thời gian</th>
-                    <th>Số đơn hoàn thành</th>
-                    <th class="text-end">
-                        Doanh thu
-                    </th>
-                </tr>
+.payment-cod {
+    background: #fff3cd;
+    color: #856404;
+}
 
-            </thead>
+.empty-data {
+    padding: 50px 20px;
+    text-align: center;
+    color: #777;
+}
 
-            <tbody>
+.empty-data div {
+    font-size: 45px;
+}
 
-                <?php if (!empty($monthlyRevenue)): ?>
+@media (max-width: 1000px) {
 
-                    <?php foreach ($monthlyRevenue as $item): ?>
+    .revenue-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 
-                        <tr>
+}
 
-                            <td>
+@media (max-width: 750px) {
 
-                                Tháng
-                                <?= (int) $item['month'] ?>
-                                /
-                                <?= (int) $item['year'] ?>
+    .admin-dashboard {
+        flex-direction: column;
+    }
 
-                            </td>
+    .admin-sidebar {
+        width: 100%;
+    }
 
-                            <td>
+}
 
-                                <?= (int) $item['total_orders'] ?>
+@media (max-width: 500px) {
 
-                                đơn
+    .revenue-grid {
+        grid-template-columns: 1fr;
+    }
 
-                            </td>
+}
 
-                            <td class="text-end fw-bold text-success">
-
-                                <?= number_format(
-                                    (float) $item['revenue'],
-                                    0,
-                                    ',',
-                                    '.'
-                                ) ?> đ
-
-                            </td>
-
-                        </tr>
-
-                    <?php endforeach; ?>
-
-                <?php else: ?>
-
-                    <tr>
-
-                        <td
-                            colspan="3"
-                            class="text-center text-muted py-4"
-                        >
-                            Chưa có đơn hàng hoàn thành.
-                        </td>
-
-                    </tr>
-
-                <?php endif; ?>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-
-
-<!-- DANH SÁCH ĐƠN HÀNG -->
-<div class="card border-0 shadow-sm">
-
-    <div class="card-header bg-white py-3">
-
-        <h5 class="fw-bold mb-0">
-            📋 Đơn hàng tạo doanh thu
-        </h5>
-
-    </div>
-
-    <div class="table-responsive">
-
-        <table class="table table-hover align-middle mb-0">
-
-            <thead class="table-light">
-
-                <tr>
-                    <th>Mã đơn</th>
-                    <th>Khách hàng</th>
-                    <th>Số điện thoại</th>
-                    <th>Thanh toán</th>
-                    <th class="text-end">
-                        Tổng tiền
-                    </th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                <?php if (!empty($orders)): ?>
-
-                    <?php foreach ($orders as $order): ?>
-
-                        <tr>
-
-                            <td>
-
-                                <strong>
-                                    #<?= (int) $order['id'] ?>
-                                </strong>
-
-                            </td>
-
-                            <td>
-
-                                <?= htmlspecialchars(
-                                    $order['customer_name'] ?? ''
-                                ) ?>
-
-                            </td>
-
-                            <td>
-
-                                <?= htmlspecialchars(
-                                    $order['phone'] ?? ''
-                                ) ?>
-
-                            </td>
-
-                            <td>
-
-                                <?php if (
-                                    ($order['payment_status'] ?? '')
-                                    === 'paid'
-                                ): ?>
-
-                                    <span class="badge bg-success">
-                                        Đã thanh toán
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <span
-                                        class="badge bg-warning text-dark"
-                                    >
-                                        Thanh toán khi nhận hàng
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </td>
-
-                            <td class="text-end fw-bold">
-
-                                <?= number_format(
-                                    (float) $order['total'],
-                                    0,
-                                    ',',
-                                    '.'
-                                ) ?> đ
-
-                            </td>
-
-                        </tr>
-
-                    <?php endforeach; ?>
-
-                <?php else: ?>
-
-                    <tr>
-
-                        <td
-                            colspan="5"
-                            class="text-center text-muted py-4"
-                        >
-                            Chưa có dữ liệu doanh thu.
-                        </td>
-
-                    </tr>
-
-                <?php endif; ?>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
+</style>

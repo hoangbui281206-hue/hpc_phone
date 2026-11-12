@@ -8,9 +8,6 @@ use App\Models\Order;
 
 class OrderController extends BaseController
 {
-    /**
-     * Đặt hàng
-     */
     public function checkout(): void
     {
         $this->requireLogin();
@@ -18,86 +15,95 @@ class OrderController extends BaseController
         $cart = $_SESSION['cart'] ?? [];
 
         if (empty($cart)) {
-            $_SESSION['flash'] = 'Giỏ hàng của bạn đang trống.';
+            $_SESSION['flash'] = 'Giỏ hàng đang trống.';
             $this->redirect('/cart');
+            return;
         }
 
-        $name = trim($_POST['customer_name'] ?? '');
-        $phone = trim($_POST['phone'] ?? '');
-        $address = trim($_POST['address'] ?? '');
-        $paymentMethod = $_POST['payment_method'] ?? 'cod';
+        $customerName = trim(
+            (string) ($_POST['customer_name'] ?? '')
+        );
 
-        if ($name === '' || $phone === '' || $address === '') {
+        $phone = trim(
+            (string) ($_POST['phone'] ?? '')
+        );
+
+        $address = trim(
+            (string) ($_POST['address'] ?? '')
+        );
+
+        $paymentMethod = trim(
+            (string) ($_POST['payment_method'] ?? 'cod')
+        );
+
+        if (
+            $customerName === ''
+            || $phone === ''
+            || $address === ''
+        ) {
             $_SESSION['flash'] =
                 'Vui lòng điền đầy đủ thông tin nhận hàng.';
 
             $this->redirect('/cart');
+            return;
+        }
+
+        if (!in_array(
+            $paymentMethod,
+            ['cod', 'online'],
+            true
+        )) {
+            $paymentMethod = 'cod';
         }
 
         try {
             $orderModel = new Order();
 
             $orderId = $orderModel->create(
-                (int) $_SESSION['user']['id'],
+                (int) ($_SESSION['user']['id'] ?? 0),
                 $cart,
-                $name,
+                $customerName,
                 $phone,
                 $address,
                 $paymentMethod
             );
 
-            /**
-             * Xóa giỏ hàng sau khi đặt thành công
-             */
             unset($_SESSION['cart']);
 
-            /**
-             * Thanh toán online
-             */
             if ($paymentMethod === 'online') {
                 $_SESSION['flash'] =
-                    "Đơn hàng #{$orderId} đã được tạo. "
-                    . "Vui lòng tiếp tục thanh toán online.";
+                    'Đơn hàng #' . $orderId
+                    . ' đã được tạo. Vui lòng tiếp tục thanh toán.';
 
                 $this->redirect('/payment/' . $orderId);
+                return;
             }
 
-            /**
-             * Thanh toán khi nhận hàng
-             */
             $_SESSION['flash'] =
-                "Đặt hàng thành công! Mã đơn hàng của bạn là #{$orderId}.";
+                'Đặt hàng thành công! Mã đơn hàng của bạn là #'
+                . $orderId;
 
             $this->redirect('/my-orders');
+            return;
 
         } catch (\Throwable $e) {
-
             $_SESSION['flash'] =
                 'Không thể đặt hàng: ' . $e->getMessage();
 
             $this->redirect('/cart');
+            return;
         }
     }
 
-    /**
-     * Danh sách đơn hàng của khách hàng đang đăng nhập
-     */
     public function myOrders(): void
     {
         $this->requireLogin();
 
-        $userId = (int) ($_SESSION['user']['id'] ?? 0);
-
-        if ($userId <= 0) {
-            $_SESSION['flash'] =
-                'Không thể xác định tài khoản của bạn.';
-
-            $this->redirect('/login');
-        }
-
         $orderModel = new Order();
 
-        $orders = $orderModel->getOrdersByUser($userId);
+        $orders = $orderModel->getByUserId(
+            (int) $_SESSION['user']['id']
+        );
 
         $this->view(
             'orders/my-orders',
@@ -105,48 +111,38 @@ class OrderController extends BaseController
         );
     }
 
-    /**
-     * Chi tiết đơn hàng của khách hàng
-     */
     public function myOrderDetail(): void
     {
         $this->requireLogin();
 
-        $orderId = (int) ($_GET['id'] ?? 0);
-        $userId = (int) ($_SESSION['user']['id'] ?? 0);
+        $id = (int) ($_GET['id'] ?? 0);
 
-        if ($orderId <= 0) {
-            $_SESSION['flash'] =
-                'Mã đơn hàng không hợp lệ.';
-
+        if ($id <= 0) {
+            $_SESSION['flash'] = 'Mã đơn hàng không hợp lệ.';
             $this->redirect('/my-orders');
+            return;
         }
 
         $orderModel = new Order();
 
-        /**
-         * Chỉ lấy đơn hàng thuộc về tài khoản hiện tại
-         */
         $order = $orderModel->findByUser(
-            $orderId,
-            $userId
+            $id,
+            (int) $_SESSION['user']['id']
         );
 
         if (!$order) {
             $_SESSION['flash'] =
-                'Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn hàng này.';
+                'Không tìm thấy đơn hàng hoặc bạn không có quyền xem.';
 
             $this->redirect('/my-orders');
+            return;
         }
 
-        $items = $orderModel->getItems($orderId);
+        $items = $orderModel->getItems($id);
 
         $this->view(
             'orders/my-order-detail',
-            compact(
-                'order',
-                'items'
-            )
+            compact('order', 'items')
         );
     }
 }

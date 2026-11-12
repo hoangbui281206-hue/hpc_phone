@@ -16,6 +16,9 @@
         <a href="/admin/orders">
             📦 Quản lý đơn hàng
         </a>
+        <a href="/admin/revenue">
+            💰 Quản lý doanh thu
+        </a>
 
         <a href="/admin/users">
             👥 Quản lý người dùng

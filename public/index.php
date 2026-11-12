@@ -44,30 +44,38 @@ $router = new Router();
 $router->get('/', 'HomeController@index');
 
 /**
- * Sản phẩm
+ * Danh sách sản phẩm
  */
 $router->get('/products', 'ProductController@index');
-$router->get('/products/{id}', 'ProductController@show');
 
 /**
- * Giỏ hàng
+ * Chi tiết sản phẩm
  */
+$router->get('/products/{id}', 'ProductController@show');
+
+/*
+|--------------------------------------------------------------------------
+| GIỎ HÀNG
+|--------------------------------------------------------------------------
+*/
+
 $router->get('/cart', 'CartController@index');
 $router->post('/cart/add', 'CartController@add');
 $router->post('/cart/update', 'CartController@update');
 $router->post('/cart/remove', 'CartController@remove');
 
-/**
- * Đăng ký
- */
+/*
+|--------------------------------------------------------------------------
+| TÀI KHOẢN
+|--------------------------------------------------------------------------
+*/
+
 $router->get('/register', 'AuthController@registerForm');
 $router->post('/register', 'AuthController@register');
 
-/**
- * Đăng nhập và đăng xuất
- */
 $router->get('/login', 'AuthController@loginForm');
 $router->post('/login', 'AuthController@login');
+
 $router->post('/logout', 'AuthController@logout');
 
 /*
@@ -82,13 +90,9 @@ $router->post('/logout', 'AuthController@logout');
 $router->post('/checkout', 'OrderController@checkout');
 
 /**
- * Trang thanh toán online
+ * Thanh toán online
  */
 $router->get('/payment/{id}', 'PaymentController@index');
-
-/**
- * Xác nhận thanh toán
- */
 $router->post('/payment/confirm', 'PaymentController@confirm');
 
 /*
@@ -105,7 +109,10 @@ $router->get('/my-orders', 'OrderController@myOrders');
 /**
  * Chi tiết đơn hàng của tôi
  */
-$router->get('/my-orders/detail', 'OrderController@myOrderDetail');
+$router->get(
+    '/my-orders/detail',
+    'OrderController@myOrderDetail'
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -118,44 +125,41 @@ $router->get('/my-orders/detail', 'OrderController@myOrderDetail');
  */
 $router->get('/admin', 'AdminController@index');
 
+/**
+ * Quản lý doanh thu
+ * PHẢI đặt trước router->dispatch()
+ */
+$router->get(
+    '/admin/revenue',
+    'AdminController@revenue'
+);
+
 /*
 |--------------------------------------------------------------------------
 | QUẢN LÝ SẢN PHẨM
 |--------------------------------------------------------------------------
 */
 
-/**
- * Danh sách sản phẩm
- */
-$router->get('/admin/products', 'AdminController@products');
+$router->get(
+    '/admin/products',
+    'AdminController@products'
+);
 
-/**
- * Thêm sản phẩm
- */
 $router->post(
     '/admin/products/create',
     'AdminController@createProduct'
 );
 
-/**
- * Trang sửa sản phẩm
- */
 $router->get(
     '/admin/products/edit',
     'AdminController@editProduct'
 );
 
-/**
- * Cập nhật sản phẩm
- */
 $router->post(
     '/admin/products/update',
     'AdminController@updateProduct'
 );
 
-/**
- * Xóa sản phẩm
- */
 $router->post(
     '/admin/products/delete',
     'AdminController@deleteProduct'
@@ -214,11 +218,4 @@ $requestUri = parse_url(
 $router->dispatch(
     $requestMethod,
     $requestUri ?: '/'
-);
-/**
- * Quản lý doanh thu
- */
-$router->get(
-    '/admin/revenue',
-    'AdminController@revenue'
 );
