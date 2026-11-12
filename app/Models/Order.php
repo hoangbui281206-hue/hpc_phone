@@ -12,17 +12,24 @@ class Order extends BaseModel
         array $cart,
         string $customerName,
         string $phone,
-        string $address
+        string $address,
+        string $paymentMethod = 'cod'
     ): int {
+        $allowedMethods = ['cod', 'online'];
+    
+        if (!in_array($paymentMethod, $allowedMethods, true)) {
+            $paymentMethod = 'cod';
+        }
+    
         $this->db->beginTransaction();
-
+    
         try {
             $total = 0;
-
+    
             foreach ($cart as $item) {
                 $total += (float) $item['price'] * (int) $item['quantity'];
             }
-
+    
             $stmt = $this->db->prepare(
                 "INSERT INTO orders (
                     user_id,
@@ -30,6 +37,8 @@ class Order extends BaseModel
                     phone,
                     address,
                     total,
+                    payment_method,
+                    payment_status,
                     status
                 ) VALUES (
                     :user_id,
@@ -37,20 +46,23 @@ class Order extends BaseModel
                     :phone,
                     :address,
                     :total,
+                    :payment_method,
+                    'unpaid',
                     'pending'
                 )"
             );
-
+    
             $stmt->execute([
                 'user_id' => $userId,
                 'customer_name' => $customerName,
                 'phone' => $phone,
                 'address' => $address,
-                'total' => $total
+                'total' => $total,
+                'payment_method' => $paymentMethod
             ]);
-
+    
             $orderId = (int) $this->db->lastInsertId();
-
+    
             $insertItem = $this->db->prepare(
                 "INSERT INTO order_items (
                     order_id,
@@ -66,29 +78,29 @@ class Order extends BaseModel
                     :quantity
                 )"
             );
-
+    
             $stock = $this->db->prepare(
                 "UPDATE products
                  SET stock = stock - :quantity_sub
                  WHERE id = :id
                  AND stock >= :quantity_check"
             );
-
+    
             foreach ($cart as $id => $item) {
                 $quantity = (int) $item['quantity'];
-
+    
                 $stock->execute([
                     'quantity_sub' => $quantity,
                     'id' => (int) $id,
                     'quantity_check' => $quantity
                 ]);
-
+    
                 if ($stock->rowCount() !== 1) {
                     throw new \RuntimeException(
                         'Sản phẩm không đủ tồn kho: ' . $item['name']
                     );
                 }
-
+    
                 $insertItem->execute([
                     'order_id' => $orderId,
                     'product_id' => (int) $id,
@@ -97,16 +109,16 @@ class Order extends BaseModel
                     'quantity' => $quantity
                 ]);
             }
-
+    
             $this->db->commit();
-
+    
             return $orderId;
-
+    
         } catch (\Throwable $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-
+    
             throw $e;
         }
     }

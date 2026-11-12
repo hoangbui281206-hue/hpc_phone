@@ -2,12 +2,15 @@
 declare(strict_types=1);
 
 /**
- * Khởi động Session
+ * ==========================================
+ * NEXO TECH - ĐIỂM KHỞI ĐỘNG ỨNG DỤNG
+ * ==========================================
  */
+
 session_start();
 
 /**
- * Đường dẫn gốc của dự án
+ * Đường dẫn gốc dự án
  */
 define('BASE_PATH', dirname(__DIR__));
 
@@ -35,6 +38,9 @@ $router = new Router();
 |--------------------------------------------------------------------------
 */
 
+/**
+ * Trang chủ
+ */
 $router->get('/', 'HomeController@index');
 
 /**
@@ -58,16 +64,29 @@ $router->get('/register', 'AuthController@registerForm');
 $router->post('/register', 'AuthController@register');
 
 /**
- * Đăng nhập / Đăng xuất
+ * Đăng nhập và đăng xuất
  */
 $router->get('/login', 'AuthController@loginForm');
 $router->post('/login', 'AuthController@login');
 $router->post('/logout', 'AuthController@logout');
 
-/**
- * Thanh toán
- */
+/*
+|--------------------------------------------------------------------------
+| ĐẶT HÀNG VÀ THANH TOÁN
+|--------------------------------------------------------------------------
+*/
+
 $router->post('/checkout', 'OrderController@checkout');
+
+$router->get(
+    '/payment/{id}',
+    'PaymentController@index'
+);
+
+$router->post(
+    '/payment/confirm',
+    'PaymentController@confirm'
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -76,7 +95,7 @@ $router->post('/checkout', 'OrderController@checkout');
 */
 
 /**
- * Dashboard Admin
+ * Dashboard
  */
 $router->get('/admin', 'AdminController@index');
 
@@ -86,26 +105,41 @@ $router->get('/admin', 'AdminController@index');
 |--------------------------------------------------------------------------
 */
 
+/**
+ * Danh sách sản phẩm
+ */
 $router->get(
     '/admin/products',
     'AdminController@products'
 );
 
+/**
+ * Thêm sản phẩm
+ */
 $router->post(
     '/admin/products/create',
     'AdminController@createProduct'
 );
 
+/**
+ * Trang sửa sản phẩm
+ */
 $router->get(
     '/admin/products/edit',
     'AdminController@editProduct'
 );
 
+/**
+ * Cập nhật sản phẩm
+ */
 $router->post(
     '/admin/products/update',
     'AdminController@updateProduct'
 );
 
+/**
+ * Xóa sản phẩm
+ */
 $router->post(
     '/admin/products/delete',
     'AdminController@deleteProduct'
@@ -154,7 +188,8 @@ $router->post(
 |--------------------------------------------------------------------------
 */
 
-$requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$requestMethod =
+    $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $requestUri = parse_url(
     $_SERVER['REQUEST_URI'] ?? '/',

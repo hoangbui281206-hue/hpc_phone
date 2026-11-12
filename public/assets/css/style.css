@@ -5,7 +5,9 @@
 body {
     background: #f6f7fb;
     color: #202124;
+    min-height: 100vh;
 }
+
 
 /* ========================================
    NAVBAR
@@ -16,6 +18,7 @@ body {
     font-weight: 800;
     letter-spacing: 1.5px;
 }
+
 
 /* ========================================
    BANNER CHẠY
@@ -34,14 +37,98 @@ body {
     display: block;
 }
 
-/* Làm nút chuyển banner dễ nhìn hơn */
+/* Nút chuyển banner */
+
 .carousel-control-prev,
 .carousel-control-next {
     width: 10%;
 }
 
+
 /* ========================================
-   TIỆN ÍCH
+   SẢN PHẨM
+======================================== */
+
+.product-card {
+    height: 100%;
+    border: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+/* Hiệu ứng khi di chuột */
+
+.product-card:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.14);
+}
+
+
+/* Link bao quanh ảnh */
+
+.product-image-link {
+    display: block;
+    overflow: hidden;
+    text-decoration: none;
+    background: #ffffff;
+}
+
+
+/* Ảnh điện thoại */
+
+.product-card .product-image {
+    width: 100%;
+    height: 240px;
+    object-fit: contain;
+    background: #ffffff;
+    padding: 15px;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+/* Phóng nhẹ ảnh khi di chuột */
+
+.product-card:hover .product-image {
+    transform: scale(1.05);
+}
+
+
+/* Tên sản phẩm */
+
+.product-card .product-name {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    min-height: 48px;
+    margin-bottom: 12px;
+}
+
+
+/* Giá sản phẩm */
+
+.price {
+    margin-bottom: 15px;
+    color: #d9480f;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+
+/* Nút trong sản phẩm */
+
+.product-card .btn {
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+
+/* ========================================
+   TIỆN ÍCH / DỊCH VỤ
 ======================================== */
 
 .feature-box {
@@ -53,8 +140,9 @@ body {
     background: #ffffff;
     border-radius: 16px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
-    transition: transform 0.25s ease,
-                box-shadow 0.25s ease;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
 }
 
 .feature-box:hover {
@@ -77,45 +165,6 @@ body {
     color: #6c757d;
 }
 
-/* ========================================
-   SẢN PHẨM
-======================================== */
-
-.product-card {
-    height: 100%;
-    border: 0;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #ffffff;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
-    transition: transform 0.25s ease,
-                box-shadow 0.25s ease;
-}
-
-.product-card:hover {
-    transform: translateY(-7px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.14);
-}
-
-.product-card img {
-    width: 100%;
-    height: 190px;
-    object-fit: contain;
-    background: #ffffff;
-    padding: 14px;
-}
-
-.product-card h5 {
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-.price {
-    margin-bottom: 15px;
-    color: #d9480f;
-    font-size: 1.1rem;
-    font-weight: 800;
-}
 
 /* ========================================
    ĐĂNG NHẬP / ĐĂNG KÝ
@@ -130,16 +179,33 @@ body {
     box-shadow: 0 5px 24px rgba(0, 0, 0, 0.07);
 }
 
+
 /* ========================================
-   RESPONSIVE - ĐIỆN THOẠI
+   TRẠNG THÁI THANH TOÁN
+======================================== */
+
+.payment-card {
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+
+/* ========================================
+   RESPONSIVE - MÁY TÍNH BẢNG VÀ ĐIỆN THOẠI
 ======================================== */
 
 @media (max-width: 768px) {
+
+    /* Banner */
 
     .banner-image {
         height: 220px;
         object-fit: cover;
     }
+
+
+    /* Tiện ích */
 
     .feature-box {
         padding: 16px;
@@ -149,13 +215,54 @@ body {
         font-size: 30px;
     }
 
-    .product-card img {
-        height: 160px;
+
+    /* Sản phẩm */
+
+    .product-card .product-image {
+        height: 170px;
         padding: 10px;
     }
+
+    .product-card .product-name {
+        font-size: 14px;
+        min-height: 40px;
+    }
+
+    .price {
+        font-size: 1rem;
+    }
+
+
+    /* Đăng nhập */
 
     .auth-box {
         margin: 20px auto;
         padding: 20px;
+    }
+}
+
+
+/* ========================================
+   ĐIỆN THOẠI MÀN HÌNH NHỎ
+======================================== */
+
+@media (max-width: 480px) {
+
+    .banner-image {
+        height: 160px;
+    }
+
+    .product-card .product-image {
+        height: 145px;
+        padding: 8px;
+    }
+
+    .product-card .product-name {
+        font-size: 13px;
+    }
+
+    .product-card .btn {
+        font-size: 13px;
+        padding: 8px;
     }
 }
